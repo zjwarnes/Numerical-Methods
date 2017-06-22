@@ -1,0 +1,68 @@
+function [k] = shootingMethod()
+s0 = 0;
+tol = 10^-10;
+N = 100;
+a = 0;
+b = 1;
+alpha = 0;
+beta = 0;
+h= (b-a)/N;
+x = a:h:b;
+
+%define functions, f only contains y' and x so fy is 0
+f = @(x,y,yprime) -2*x*(1-x)*(1+yprime.^2).^(3/2);
+fy = @(x,y,yprime) 0;  
+fyprime = @(x,y,yprime) 6*(x-1)*x*yprime*(yprime.^2+1)^(1/2);
+
+s = zeros(N,1);
+s(1) = s0;
+
+yN = zeros(N,1);
+zN = zeros(N,1);
+k=1;
+
+%setting up the graph
+figure
+axis([0,1,-0.2,0.1]);
+title('Shooting method');
+xlabel('x values');
+ylabel('y values');
+
+while(k==1 || abs(yN(k-1)-beta) > tol && k<=N)
+    
+    %set of space for the matrices and set inital values
+    y = zeros(2,N+1);
+    y(:,1) = [alpha; s(k)];
+    z = zeros(2,N+1);
+    z(:,1)=[0;1];
+    
+    %perfrom forward euler to solve IVP
+    FY = @(Y,x)[Y(2);f(x,Y(1),Y(2))];
+    FZ = @(Y,Z,x)[Z(2);fy(x,Y(1),Y(2)).*Z(1)+fyprime(x,Y(1),Y(2)).*Z(2)];
+    for i=1:N
+       y(:,i+1) = y(:,i) + h*FY(y(:,i),x(i));
+       z(:,i+1) = z(:,i) + h*FZ(y(:,i),z(:,i),x(i));
+    end
+    
+    %plot this iteration of the graph    
+    hold on
+    plot(x,y(1,:),'o');
+    hold off
+    
+    %use root finding to calculate the next slope
+    yN(k) = y(1,N+1);
+    zN(k) = z(1,N+1);
+    if k>=1
+        s(k+1) = s(k) -(yN(k) - beta)/zN(k);
+    end
+    %print the current value of yN for debugging, check if close to beta
+    %with lots of decimal places to track convergence.
+    fprintf('yN = %1.15f\n\n',yN(k));
+    k=k+1;
+    pause;
+end
+%condition is checked after k is incremented, thus return k-1
+k=k-1;
+
+legend(sprintf('Iterations: %d', k));
+end
